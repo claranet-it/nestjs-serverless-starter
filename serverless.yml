@@ -1,0 +1,25 @@
+service: nestjs-serverless-starter
+frameworkVersion: '3'
+
+#useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stackTags:
+    Owner: 'Massimo Biagioli'
+    Destroy: 'false'
+
+plugins:
+  - serverless-offline
+
+functions:
+  app:
+    handler: dist/lambda.handler
+    events:
+      - http:
+          path: /
+          method: ANY
+      - http:
+          path: /{any+}
+          method: ANY
