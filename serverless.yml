@@ -11,11 +11,12 @@ provider:
     Destroy: 'false'
 
 plugins:
+  - serverless-plugin-typescript
   - serverless-offline
 
 functions:
   app:
-    handler: dist/lambda.handler
+    handler: src/lambda.handler
     events:
       - http:
           path: /
