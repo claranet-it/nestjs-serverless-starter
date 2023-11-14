@@ -1,25 +1,20 @@
-import { NestFactory } from '@nestjs/core';
-import serverlessExpress from '@vendia/serverless-express';
-import { Callback, Context, Handler } from 'aws-lambda';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import {
+  Context,
+  APIGatewayProxyEvent,
+  APIGatewayProxyResult,
+} from 'aws-lambda';
+import * as fastify from 'fastify';
+import { proxy } from 'aws-serverless-fastify';
+import bootstrap from './app';
 
-let server: Handler;
+let fastifyInstance: fastify.FastifyInstance;
 
-async function bootstrap(): Promise<Handler> {
-  const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
-  await app.init();
-
-  const expressApp = app.getHttpAdapter().getInstance();
-  return serverlessExpress({ app: expressApp });
-}
-
-export const handler: Handler = async (
-  event: any,
+export const handler = async (
+  event: APIGatewayProxyEvent,
   context: Context,
-  callback: Callback,
-) => {
-  server = server ?? (await bootstrap());
-  return server(event, context, callback);
+): Promise<APIGatewayProxyResult> => {
+  if (!fastifyInstance) {
+    fastifyInstance = await bootstrap();
+  }
+  return await proxy(fastifyInstance, event, context);
 };
