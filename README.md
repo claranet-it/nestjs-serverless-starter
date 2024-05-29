@@ -22,13 +22,6 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-# NestJs Serverless Starter
-
-Stack:
-- [x] NodeJs
-- [x] Serverless Framework
-- [x] Husky
-
 ## Description
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
@@ -36,56 +29,33 @@ Stack:
 ## Installation
 
 ```bash
-$ npm install
+$ pnpm install
 ```
-
-### Install Pre-commit hook
-
-```bash
-npm run precommit:init
-```
-
-then copy the content of `pre-commit-dist` into `.husky/pre-commit`
 
 ## Running the app
 
 ```bash
 # development
-$ npm run start
+$ pnpm run start
 
 # watch mode
-$ npm run start:dev
+$ pnpm run start:dev
 
 # production mode
-$ npm run start:prod
+$ pnpm run start:prod
 ```
 
 ## Test
 
 ```bash
 # unit tests
-$ npm run test
+$ pnpm run test
 
 # e2e tests
-$ npm run test:e2e
+$ pnpm run test:e2e
 
 # test coverage
-$ npm run test:cov
-```
-
-## Start Serverless Offline
-
-```bash
-npm run build
-npx serverless offline
-```
-
-## Use Cases
-
-### Health Check
-
-```bash
-curl --location 'https://<app-url>/api/health/'
+$ pnpm run test:cov
 ```
 
 ## Support
