@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiExtraModels,
   ApiResponse,
@@ -9,6 +9,9 @@ import { RegisterRequestDto } from './dto/register.request.dto';
 import { AuthService } from './auth.service';
 import { LoginRequestDto } from './dto/login.request.dto';
 import { LoginResponseDto } from './dto/login.response.dto';
+import { RefreshTokenResponseDto } from './dto/refresh-token.response.dto';
+import { RefreshTokenRequestDto } from './dto/refresh-token.request.dto';
+import JwtAuthGuard from './jwt/jwt.auth.guard';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -31,7 +34,7 @@ export class AuthController {
   @ApiExtraModels(LoginResponseDto)
   @ApiResponse({
     status: 200,
-    description: 'User logged in successfully',
+    description: 'ID Token, Access token and Refresh token',
     schema: {
       $ref: getSchemaPath(LoginResponseDto),
     },
@@ -40,5 +43,22 @@ export class AuthController {
     @Body() loginRequest: LoginRequestDto,
   ): Promise<LoginResponseDto> {
     return await this.authService.login(loginRequest);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/refresh-token')
+  @HttpCode(200)
+  @ApiExtraModels(RefreshTokenResponseDto)
+  @ApiResponse({
+    status: 200,
+    description: 'ID Token and Access token',
+    schema: {
+      $ref: getSchemaPath(RefreshTokenResponseDto),
+    },
+  })
+  async refreshToken(
+    @Body() refreshTokenRequest: RefreshTokenRequestDto,
+  ): Promise<RefreshTokenResponseDto> {
+    return await this.authService.refreshToken(refreshTokenRequest);
   }
 }

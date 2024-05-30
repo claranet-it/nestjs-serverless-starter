@@ -1,14 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { RegisterRequestDto } from './dto/register.request.dto';
 import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   InitiateAuthCommand,
+  InitiateAuthCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { LoginRequestDto } from './dto/login.request.dto';
 import { LoginResponseDto } from './dto/login.response.dto';
 import { ConfigService } from '@nestjs/config';
+import { LoginRequestDto } from './dto/login.request.dto';
+import { RefreshTokenResponseDto } from './dto/refresh-token.response.dto';
+import { RefreshTokenRequestDto } from './dto/refresh-token.request.dto';
+
+type RefreshTokenResponse = {
+  idToken: string;
+  accessToken: string;
+};
+
+type LoginResponse = RefreshTokenResponse & {
+  refreshToken: string;
+};
+
+type TokenResponse = LoginResponse | RefreshTokenResponse;
 
 @Injectable()
 export class AuthService {
@@ -26,28 +40,37 @@ export class AuthService {
     await this.changePassword(email, password);
   }
 
-  async login(loginRequest: LoginRequestDto): Promise<LoginResponseDto> {
-    const { username, password } = loginRequest;
+  async login({
+    username,
+    password,
+  }: LoginRequestDto): Promise<LoginResponseDto> {
+    const response = await this.token(
+      new InitiateAuthCommand({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        ClientId: this.configService.get('client_id'),
+        AuthParameters: {
+          USERNAME: username,
+          PASSWORD: password,
+        },
+      }),
+    );
+    if (this.isLoginResponse(response)) {
+      return response;
+    }
+  }
 
-    const authCommand = new InitiateAuthCommand({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: this.configService.get('client_id'),
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-      },
-    });
-
-    const authResponse = await this.cognitoClient.send(authCommand);
-
-    const { IdToken, AccessToken, RefreshToken } =
-      authResponse.AuthenticationResult;
-
-    return {
-      idToken: IdToken,
-      accessToken: AccessToken,
-      refreshToken: RefreshToken,
-    };
+  async refreshToken({
+    refreshToken,
+  }: RefreshTokenRequestDto): Promise<RefreshTokenResponseDto> {
+    return this.token(
+      new InitiateAuthCommand({
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: this.configService.get('client_id'),
+        AuthParameters: {
+          REFRESH_TOKEN: refreshToken,
+        },
+      }),
+    );
   }
 
   private async changePassword(email: string, password: string) {
@@ -74,5 +97,37 @@ export class AuthService {
     });
 
     await this.cognitoClient.send(createCommand);
+  }
+
+  private isLoginResponse(
+    response: TokenResponse,
+  ): response is LoginResponseDto {
+    return (response as LoginResponseDto).refreshToken !== undefined;
+  }
+
+  private async token(command: InitiateAuthCommand): Promise<TokenResponse> {
+    let authResponse: InitiateAuthCommandOutput;
+    try {
+      authResponse = await this.cognitoClient.send(command);
+    } catch (error) {
+      throw new BadRequestException('Wrong credentials!');
+    }
+
+    const { IdToken, AccessToken, RefreshToken } =
+      authResponse.AuthenticationResult;
+
+    const result = {
+      idToken: IdToken,
+      accessToken: AccessToken,
+    };
+
+    if (RefreshToken) {
+      return {
+        ...result,
+        refreshToken: RefreshToken,
+      };
+    }
+
+    return result;
   }
 }
