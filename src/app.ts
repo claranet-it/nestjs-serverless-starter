@@ -12,7 +12,7 @@ const stage = process.env.STAGE_NAME || '';
 export default async function bootstrap(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({ logger: true }),
   );
 
   app.useGlobalPipes(new ValidationPipe());
