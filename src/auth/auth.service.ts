@@ -6,12 +6,14 @@ import {
   AdminSetUserPasswordCommand,
   InitiateAuthCommand,
   InitiateAuthCommandOutput,
+  RevokeTokenCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { LoginResponseDto } from './dto/login.response.dto';
 import { ConfigService } from '@nestjs/config';
 import { LoginRequestDto } from './dto/login.request.dto';
 import { RefreshTokenResponseDto } from './dto/refresh-token.response.dto';
 import { RefreshTokenRequestDto } from './dto/refresh-token.request.dto';
+import { LogoutRequestDto } from './dto/logout.request.dto';
 
 type RefreshTokenResponse = {
   idToken: string;
@@ -71,6 +73,19 @@ export class AuthService {
         },
       }),
     );
+  }
+
+  async logout({ refreshToken }: LogoutRequestDto): Promise<void> {
+    try {
+      await this.cognitoClient.send(
+        new RevokeTokenCommand({
+          Token: refreshToken,
+          ClientId: this.configService.get('client_id'),
+        }),
+      );
+    } catch (error) {
+      throw new BadRequestException('Bad token!');
+    }
   }
 
   private async changePassword(email: string, password: string) {

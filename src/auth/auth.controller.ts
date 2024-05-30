@@ -12,6 +12,7 @@ import { LoginResponseDto } from './dto/login.response.dto';
 import { RefreshTokenResponseDto } from './dto/refresh-token.response.dto';
 import { RefreshTokenRequestDto } from './dto/refresh-token.request.dto';
 import JwtAuthGuard from './jwt/jwt.auth.guard';
+import { LogoutRequestDto } from './dto/logout.request.dto';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -60,5 +61,16 @@ export class AuthController {
     @Body() refreshTokenRequest: RefreshTokenRequestDto,
   ): Promise<RefreshTokenResponseDto> {
     return await this.authService.refreshToken(refreshTokenRequest);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/logout')
+  @HttpCode(204)
+  @ApiResponse({
+    status: 204,
+    description: 'Revoked refresh token',
+  })
+  async logout(@Body() logoutRequest: LogoutRequestDto): Promise<void> {
+    return await this.authService.logout(logoutRequest);
   }
 }
