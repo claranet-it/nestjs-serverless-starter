@@ -58,9 +58,9 @@ export class AuthController {
     },
   })
   async refreshToken(
-    @Body() refreshTokenRequest: RefreshTokenRequestDto,
+    @Body() { refreshToken }: RefreshTokenRequestDto,
   ): Promise<RefreshTokenResponseDto> {
-    return await this.authService.refreshToken(refreshTokenRequest);
+    return await this.authService.refreshToken(refreshToken);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -70,7 +70,7 @@ export class AuthController {
     status: 204,
     description: 'Revoked refresh token',
   })
-  async logout(@Body() logoutRequest: LogoutRequestDto): Promise<void> {
-    return await this.authService.logout(logoutRequest);
+  async logout(@Body() { refreshToken }: LogoutRequestDto): Promise<void> {
+    return await this.authService.logout(refreshToken);
   }
 }

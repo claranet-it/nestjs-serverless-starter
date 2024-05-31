@@ -3,8 +3,10 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { passportJwtSecret } from 'jwks-rsa';
-import { PayloadTokenDto } from '../dto/payload-token.dto';
-import { UserDto } from '../dto/user.dto';
+
+type TokenPayload = {
+  username: string;
+};
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -22,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }),
 
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      audience: configService.get('client_id'),
+      /*audience: configService.get('client_id'),*/
       issuer: `https://cognito-idp.${configService.get(
         'REGION',
       )}.amazonaws.com/${configService.get('user_pool_id')}`,
@@ -30,11 +32,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  public async validate(payload: PayloadTokenDto): Promise<UserDto> {
+  public async validate({ username }: TokenPayload): Promise<TokenPayload> {
     return {
-      email: payload.email,
-      firstName: payload.name,
-      lastName: payload.family_name,
+      username,
     };
   }
 }

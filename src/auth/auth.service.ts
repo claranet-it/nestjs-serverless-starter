@@ -1,22 +1,35 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { RegisterRequestDto } from './dto/register.request.dto';
 import {
-  CognitoIdentityProviderClient,
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
+  CognitoIdentityProviderClient,
+  GetUserCommand,
   InitiateAuthCommand,
   InitiateAuthCommandOutput,
   RevokeTokenCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { LoginResponseDto } from './dto/login.response.dto';
 import { ConfigService } from '@nestjs/config';
-import { LoginRequestDto } from './dto/login.request.dto';
-import { RefreshTokenResponseDto } from './dto/refresh-token.response.dto';
-import { RefreshTokenRequestDto } from './dto/refresh-token.request.dto';
-import { LogoutRequestDto } from './dto/logout.request.dto';
+
+type RegisterParams = {
+  email: string;
+  password: string;
+  firstname: string;
+  lastname: string;
+};
+
+type LoginParams = {
+  username: string;
+  password: string;
+};
+
+type UserInfo = {
+  email: string;
+  firstName: string;
+  lastName: string;
+};
 
 type RefreshTokenResponse = {
-  idToken: string;
   accessToken: string;
 };
 
@@ -34,18 +47,18 @@ export class AuthService {
     this.cognitoClient = new CognitoIdentityProviderClient({});
   }
 
-  async register(signupRequest: RegisterRequestDto): Promise<void> {
-    const { email, password, firstname, lastname } = signupRequest;
-
+  async register({
+    email,
+    password,
+    firstname,
+    lastname,
+  }: RegisterParams): Promise<void> {
     await this.createUser(email, firstname, lastname);
 
     await this.changePassword(email, password);
   }
 
-  async login({
-    username,
-    password,
-  }: LoginRequestDto): Promise<LoginResponseDto> {
+  async login({ username, password }: LoginParams): Promise<LoginResponse> {
     const response = await this.token(
       new InitiateAuthCommand({
         AuthFlow: 'USER_PASSWORD_AUTH',
@@ -61,9 +74,7 @@ export class AuthService {
     }
   }
 
-  async refreshToken({
-    refreshToken,
-  }: RefreshTokenRequestDto): Promise<RefreshTokenResponseDto> {
+  async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
     return this.token(
       new InitiateAuthCommand({
         AuthFlow: 'REFRESH_TOKEN_AUTH',
@@ -75,7 +86,7 @@ export class AuthService {
     );
   }
 
-  async logout({ refreshToken }: LogoutRequestDto): Promise<void> {
+  async logout(refreshToken: string): Promise<void> {
     try {
       await this.cognitoClient.send(
         new RevokeTokenCommand({
@@ -83,6 +94,27 @@ export class AuthService {
           ClientId: this.configService.get('client_id'),
         }),
       );
+    } catch (error) {
+      throw new BadRequestException('Bad token!');
+    }
+  }
+
+  async getUserInfo(accessToken: string): Promise<UserInfo> {
+    try {
+      const result = await this.cognitoClient.send(
+        new GetUserCommand({
+          AccessToken: accessToken,
+        }),
+      );
+
+      return {
+        email: result.Username,
+        firstName: result.UserAttributes.find((attr) => attr.Name === 'name')
+          ?.Value,
+        lastName: result.UserAttributes.find(
+          (attr) => attr.Name === 'family_name',
+        )?.Value,
+      };
     } catch (error) {
       throw new BadRequestException('Bad token!');
     }
@@ -117,7 +149,7 @@ export class AuthService {
   private isLoginResponse(
     response: TokenResponse,
   ): response is LoginResponseDto {
-    return (response as LoginResponseDto).refreshToken !== undefined;
+    return (response as LoginResponse).refreshToken !== undefined;
   }
 
   private async token(command: InitiateAuthCommand): Promise<TokenResponse> {
@@ -128,11 +160,9 @@ export class AuthService {
       throw new BadRequestException('Wrong credentials!');
     }
 
-    const { IdToken, AccessToken, RefreshToken } =
-      authResponse.AuthenticationResult;
+    const { AccessToken, RefreshToken } = authResponse.AuthenticationResult;
 
     const result = {
-      idToken: IdToken,
       accessToken: AccessToken,
     };
 
