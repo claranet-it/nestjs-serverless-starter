@@ -1,20 +1,17 @@
-import {
-  Context,
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
-import * as fastify from 'fastify';
-import { proxy } from 'aws-serverless-fastify';
+import { NestFastifyApplication } from '@nestjs/platform-fastify';
+import awsLambdaFastify, { PromiseHandler } from '@fastify/aws-lambda';
+import { Context, APIGatewayProxyEvent } from 'aws-lambda';
 import bootstrap from './app';
 
-let fastifyInstance: fastify.FastifyInstance;
+let cachedNestApp;
 
 export const handler = async (
   event: APIGatewayProxyEvent,
   context: Context,
-): Promise<APIGatewayProxyResult> => {
-  if (!fastifyInstance) {
-    fastifyInstance = await bootstrap();
+): Promise<PromiseHandler> => {
+  if (!cachedNestApp) {
+    const nestApp: NestFastifyApplication = await bootstrap();
+    cachedNestApp = awsLambdaFastify(nestApp.getHttpAdapter().getInstance());
   }
-  return await proxy(fastifyInstance, event, context);
+  return cachedNestApp(event, context);
 };
