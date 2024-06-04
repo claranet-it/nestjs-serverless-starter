@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
 pnpm run format && \
-pnpm run lint:fix
+pnpm run lint
