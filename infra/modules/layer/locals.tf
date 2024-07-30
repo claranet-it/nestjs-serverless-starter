@@ -1,6 +1,6 @@
 locals {
   compatible_runtimes = ["nodejs20.x"]
-  bucket_prefix       = "nestjs-dev-layers"
+  bucket_prefix       = var.name
   build_dir           = "${path.module}/../../../build/layer"
   layer_dir           = "${local.build_dir}/${var.name}"
   filename            = "${local.build_dir}/${var.name}.zip"
